@@ -3,10 +3,10 @@
 
 using namespace std;
 
-Cache::Cache()
+/*Cache::Cache()
 {
     return;
-}
+}*/
 
 Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  char replacement_policy, char inclusion_policy)
 {
@@ -29,15 +29,15 @@ Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  ch
     index_mask = (sets - 1) << block_bits; 
     index_bits = log2(sets);
     tag_shift = block_bits + index_bits;
-    tag_mask = ((unsigned int) pow(2, 32 - tag_shift) - 1) << tag_shift;
+    this->tag_mask = ((unsigned int) pow(2, 32 - tag_shift) - 1) << tag_shift;
 
     #ifdef DEBUG
-        cout << hex << tag_mask <<endl;
-        cout << hex << index_mask <<endl;
-        cout << hex << block_mask <<endl;
-        cout << tag_shift <<endl;
-        cout << index_bits <<endl;
-        cout << block_bits <<endl;
+        cout << "Tag Mask: " << tag_mask << endl;
+        cout << "Index Mask: " <<  index_mask <<endl;
+        cout << "Block Mask: " << block_mask <<endl;
+        cout << "Tag shift: " << tag_shift <<endl;
+        cout << "Index bits: " << index_bits <<endl;
+        cout << "Block bits: " << block_bits <<endl;
     #endif
     tags = (unsigned int **) calloc(sets, sizeof(unsigned int *));
     dirty = (char **) calloc(sets, sizeof(char *));
@@ -65,17 +65,18 @@ void Cache::add_below(Cache *below)
 
 unsigned int Cache::get_tag(unsigned int address)
 {
-   return (address && tag_mask) >> tag_shift;
+    return (address & this->tag_mask) >> tag_shift;
 }
+
 
 unsigned int Cache::get_block(unsigned int address)
 {
-   return address && block_mask;
+   return address & block_mask;
 }
 
 unsigned int Cache::get_index(unsigned int address)
 {
-   return (address && index_mask) >> block_bits;
+   return (address & index_mask) >> block_bits;
 }
 
 unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
@@ -88,12 +89,21 @@ unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
 
 void Cache::write(unsigned int address, unsigned int prog_counter)
 {
+#ifdef DEBUG
+    cout << "Input Address: " << address <<endl;
+#endif
     unsigned int tag = get_tag(address);
+#ifdef DEBUG
+    cout << "Input Tag: " << tag <<endl;
+#endif
     unsigned int index = get_index(address);
-    
+#ifdef DEBUG
+    cout << "Input Index: " << index <<endl;
+#endif
+     
     for(unsigned int i=0; i < assoc; i++)
     {
-        if((tag == tags[index][i]) && (dirty[index][i] != FREE))
+        if((tag == tags[index][i]) & (dirty[index][i] != FREE))
         {
             //set_flags is used to distinguish between 
             //0x00000000 and not set
@@ -113,6 +123,8 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
 
 void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
+    cout << "Tag placed: " << tag << endl;
+
     for(unsigned int i=0; i < assoc; i++)
     {
         if(dirty[index][i] == FREE) //Free space found
@@ -175,13 +187,12 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 
 void Cache::read(unsigned int address, unsigned int prog_counter)
 {
-    cout << "abc" << endl;
     unsigned int tag = get_tag(address);
     unsigned int index = get_index(address);
     
     for(unsigned int i=0; i < assoc; i++)
     {
-        if((tag == tags[index][i]) && (dirty[index][i] != FREE))
+        if((tag == tags[index][i]) & (dirty[index][i] != FREE))
         {
             //set_flags is used to distinguish between 
             //0x00000000 and not set
@@ -192,6 +203,16 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
     }
 
     //Cache miss so allocate
-    misses++;
+    this->misses++;
+    cout << "Missed" << endl;
     allocate(address, tag, index, prog_counter);
 }
+
+void Cache::get_stats(unsigned int& hits, unsigned int& misses, unsigned int& mem_ops)
+{
+    hits = this->hits;
+    misses = this->misses;
+    mem_ops = this->mem_ops;
+}
+
+

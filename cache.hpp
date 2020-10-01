@@ -6,9 +6,9 @@
 #define TRUE 0
 #define FALSE 1
 
-#define NOT_DIRTY 0
+#define NOT_DIRTY 2
 #define DIRTY 1
-#define FREE 2
+#define FREE 0 
 
 #define LRU 0
 #define PLRU 1
@@ -51,12 +51,13 @@ class Cache
         unsigned int get_block(unsigned int address);
         unsigned int convert_to_address(unsigned int tag, unsigned int index);
     public:
-        Cache();
+        //Cache();
         Cache(unsigned int size, unsigned int block_size, unsigned int assoc, char repl_pol, char incl_pol);
         void add_above(Cache *above);
         void add_below(Cache *below);
         void read(unsigned int address, unsigned int prog_counter);
         void write(unsigned int address, unsigned int prog_counter);
+        void get_stats(unsigned int& hits, unsigned int& misses, unsigned int& mem_ops);
 };
 
 #endif

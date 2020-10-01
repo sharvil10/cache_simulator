@@ -17,7 +17,8 @@ using namespace std;
 class Simulator
 {
     private:
-        Cache *hierarchy;
+        Cache *L1;
+        Cache *L2;
         unsigned int prog_counter = 0;
         Trace *trace; 
     public:
@@ -31,7 +32,8 @@ class Simulator
                   string& trace_file);
         void execute();
         void execute_instruction(Instruction& i);
-
+        void get_stats();
+        
 
 };
 #endif

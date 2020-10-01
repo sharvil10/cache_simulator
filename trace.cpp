@@ -14,12 +14,11 @@ Trace::Trace(string& trace_path)
     string curr_line;
     Instruction *tmp_trace;
     while (getline(trace_file, curr_line)) {
-        cout << curr_line << "\n";
         if( curr_line.compare(0, 3, "\xEF\xBB\xBF") == 0)
             curr_line = curr_line.substr(3);
 
         if((curr_line[0] != 'r') && (curr_line[0] != 'w'))
-            break;
+            continue;
         if(counter == 0)
         {
             trace = (Instruction *) calloc(1, sizeof(Instruction));
@@ -40,6 +39,9 @@ Trace::Trace(string& trace_path)
         get_hex(curr_line, trace[counter - 1].address);
         len++;
     }
+#ifdef DEBUG
+    printf("%u\n", len);
+#endif
     trace_file.close();
 }
 
@@ -72,7 +74,7 @@ void Trace::get_hex(string& inst, unsigned int& address)
     }
 
     #ifdef DEBUG
-        printf("%x\n", address);
+        //printf("Input address is: %x\n", address);
     #endif
 }
 
