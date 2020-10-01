@@ -3,13 +3,19 @@
 
 using namespace std;
 
-Cache::Cache(uint32_t size, uint32_t block_size, uint32_t assoc)
+Cache::Cache()
+{
+    return;
+}
+
+Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  char replacement_policy, char inclusion_policy)
 {
     this->size = size;
     this-> block_size = block_size;
     this->assoc = assoc;
-    this->sets = (uint32_t) size / (block_size * assoc);
-
+    this->sets = (unsigned int) size / (block_size * assoc);
+    this->replacement_policy = replacement_policy;
+    this->inclusion_policy = inclusion_policy;
     //All sub addresses masks can be set by using size
     //and shifting them by the previous mask sizes.
     // ------------------------------------------------
@@ -23,7 +29,7 @@ Cache::Cache(uint32_t size, uint32_t block_size, uint32_t assoc)
     index_mask = (sets - 1) << block_bits; 
     index_bits = log2(sets);
     tag_shift = block_bits + index_bits;
-    tag_mask = ((uint32_t) pow(2, 32 - tag_shift) - 1) << tag_shift;
+    tag_mask = ((unsigned int) pow(2, 32 - tag_shift) - 1) << tag_shift;
 
     #ifdef DEBUG
         cout << hex << tag_mask <<endl;
@@ -33,15 +39,17 @@ Cache::Cache(uint32_t size, uint32_t block_size, uint32_t assoc)
         cout << index_bits <<endl;
         cout << block_bits <<endl;
     #endif
-    tags = (uint32_t **) calloc(sets, sizeof(uint32_t *));
+    tags = (unsigned int **) calloc(sets, sizeof(unsigned int *));
     dirty = (char **) calloc(sets, sizeof(char *));
-    if(repl_pol == LRU)
-        sequence = (uint32_t **) calloc(sets, sizeof(uint32_t *));
-    for(uint32_t i = 0; i < sets; i++)
-        tags[i] = (uint32_t *) calloc(assoc, sizeof(uint32_t));
+    if(replacement_policy == LRU)
+        sequence = (unsigned int **) calloc(sets, sizeof(unsigned int *));
+    for(unsigned int i = 0; i < sets; i++)
+    {
+        tags[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
         dirty[i] = (char *) calloc(assoc, sizeof(char));
-        if(repl_pol == LRU)
-            sequence[i] = (uint32_t *) calloc(assoc, sizeof(uint32_t));
+        if(replacement_policy == LRU)
+            sequence[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
+    }
 
 }
 
@@ -55,35 +63,35 @@ void Cache::add_below(Cache *below)
     this->below = below;
 }
 
-static uint32_t Cache::get_tag(uint32_t address)
+unsigned int Cache::get_tag(unsigned int address)
 {
    return (address && tag_mask) >> tag_shift;
 }
 
-static uint32_t Cache::get_block(uint32_t address)
+unsigned int Cache::get_block(unsigned int address)
 {
    return address && block_mask;
 }
 
-static uint32_t Cache::get_index(uint32_t address)
+unsigned int Cache::get_index(unsigned int address)
 {
    return (address && index_mask) >> block_bits;
 }
 
-static uint32_t Cache::convert_to_address(uint32_t tag, uint32_t index)
+unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
 {
-    uint32_t address = 0;//Offset of the block is irrelevant
+    unsigned int address = 0;//Offset of the block is irrelevant
     address |= tag << tag_shift;
     address |= index <<  block_bits;
     return address;
 }
 
-void Cache::write(uint32_t address, uint32_t prog_counter)
+void Cache::write(unsigned int address, unsigned int prog_counter)
 {
-    uint32_t tag = get_tag(address);
-    uint32_t index = get_index(address);
+    unsigned int tag = get_tag(address);
+    unsigned int index = get_index(address);
     
-    for(uint32_t i=0; i < assoc; i++)
+    for(unsigned int i=0; i < assoc; i++)
     {
         if((tag == tags[index][i]) && (dirty[index][i] != FREE))
         {
@@ -98,14 +106,14 @@ void Cache::write(uint32_t address, uint32_t prog_counter)
 
     //Cache miss so allocate
     misses++;
-    allocate(address, tag, index);
+    allocate(address, tag, index, prog_counter);
 
 
 }
 
-void Cache::allocate(uint32_t address, uint32_t tag, uint32_t index, uint32_t prog_counter)
+void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
-    for(uint32_t i=0; i < assoc; i++)
+    for(unsigned int i=0; i < assoc; i++)
     {
         if(dirty[index][i] == FREE) //Free space found
         {
@@ -116,23 +124,23 @@ void Cache::allocate(uint32_t address, uint32_t tag, uint32_t index, uint32_t pr
         }
     }
 
-    void replace(uint32_t tag, uint32_t index);
+    replace(tag, index, prog_counter);
     if(below == NULL)//Nothing below which means last cache so now will get from memory
     {
         mem_ops++;
         return;
     }
-    this->below->read(address);
+    this->below->read(address, prog_counter);
 }
 
-void Cache::replace(uint32_t tag, uint32_t index)
+void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
-    uint32_t idx;
-    switch(repl_pol)
+    unsigned int idx;
+    switch(replacement_policy)
     {
         case LRU:
             idx = lru(tag, index);
-        case PSLRU:
+        case PLRU:
             return;
         case OPT:
             return;
@@ -140,37 +148,38 @@ void Cache::replace(uint32_t tag, uint32_t index)
 
     if(dirty[index][idx] == DIRTY)//Write-back policy
     {
-        uint32_t address_to_replace = convert_to_address(tag[index][idx], index);
+        unsigned int address_to_replace = convert_to_address(tags[index][idx], index);
         if(below == NULL)
             mem_ops++;
         else
-            below->write(address_to_replace);
+            below->write(address_to_replace, prog_counter);
     }
     tags[index][idx] = tag;
 }
 
-uint32_t Cache::lru(uint32_t tag_to_write, uint32_t index)
+unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 {
     int32_t idx = 0;
-    uint32_t min = 0xffffffff;
-    for(uint32_t i=0; i < assoc; i++)
+    unsigned int min = 0xffffffff;
+    for(unsigned int i=0; i < assoc; i++)
     {
         if(sequence[index][i] < min)
         {
             min = sequence[index][i];
-            idx = i
+            idx = i;
         }
     }
     return idx;//Assoc index of the victim block
 
 }
 
-void Cache::read(uint32_t address, uint32_t prog_counter)
+void Cache::read(unsigned int address, unsigned int prog_counter)
 {
-    uint32_t tag = get_tag(address);
-    uint32_t index = get_index(address);
+    cout << "abc" << endl;
+    unsigned int tag = get_tag(address);
+    unsigned int index = get_index(address);
     
-    for(uint32_t i=0; i < assoc; i++)
+    for(unsigned int i=0; i < assoc; i++)
     {
         if((tag == tags[index][i]) && (dirty[index][i] != FREE))
         {
@@ -184,5 +193,5 @@ void Cache::read(uint32_t address, uint32_t prog_counter)
 
     //Cache miss so allocate
     misses++;
-    allocate(address, tag, index);
+    allocate(address, tag, index, prog_counter);
 }

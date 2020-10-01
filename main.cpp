@@ -1,15 +1,16 @@
-#include "trace.hpp"
-#include "cache.hpp"
+#include "simulator.hpp"
 
 using namespace std;
 
 int main()
 {
     string path = "../MachineProblem1_Fall2020/traces/compress_trace.txt";
-    Trace tr(path);
-    uint32_t size = 256;
-    uint32_t assoc = 1;
-    uint32_t block_size = 32;
-    Cache l1(size, block_size, assoc);
-    tr.clean();
+    unsigned int block_size = 32;
+    unsigned int l1_size = 8192;
+    unsigned int l1_assoc = 4;
+    unsigned int l2_size = 262144;
+    unsigned int l2_assoc = 8;
+    char inclusion_policy = 0;
+    char replacement_policy = 0;    
+    Simulator sim(block_size, l1_size, l1_assoc, l2_size, l2_assoc, replacement_policy, inclusion_policy, path);
 }

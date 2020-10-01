@@ -10,6 +10,7 @@ Trace::Trace(string& trace_path)
 {
     ifstream trace_file(trace_path);
     counter = 0;
+    len = 0;
     string curr_line;
     Instruction *tmp_trace;
     while (getline(trace_file, curr_line)) {
@@ -37,7 +38,7 @@ Trace::Trace(string& trace_path)
         }
         trace[counter - 1].rw_flags = curr_line[0];
         get_hex(curr_line, trace[counter - 1].address);
-
+        len++;
     }
     trace_file.close();
 }
@@ -53,7 +54,7 @@ void Trace::clean()
     
 }*/
 
-void Trace::get_hex(string& inst, uint32_t& address)
+void Trace::get_hex(string& inst, unsigned int& address)
 {
     size_t N = inst.length();
     int shift = 0;
@@ -75,3 +76,7 @@ void Trace::get_hex(string& inst, uint32_t& address)
     #endif
 }
 
+unsigned int Trace::get_length()
+{
+    return len;
+}
