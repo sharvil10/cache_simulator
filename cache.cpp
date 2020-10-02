@@ -32,9 +32,9 @@ Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  ch
     this->tag_mask = ((unsigned int) pow(2, 32 - tag_shift) - 1) << tag_shift;
 
     #ifdef DEBUG
-        cout << "Tag Mask: " << tag_mask << endl;
-        cout << "Index Mask: " <<  index_mask <<endl;
-        cout << "Block Mask: " << block_mask <<endl;
+        cout << "Tag Mask: " << hex << tag_mask << endl;
+        cout << "Index Mask: " <<  hex << index_mask <<endl;
+        cout << "Block Mask: " << hex << block_mask <<endl;
         cout << "Tag shift: " << tag_shift <<endl;
         cout << "Index bits: " << index_bits <<endl;
         cout << "Block bits: " << block_bits <<endl;
@@ -90,15 +90,15 @@ unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
 void Cache::write(unsigned int address, unsigned int prog_counter)
 {
 #ifdef DEBUG
-    cout << "Input Address: " << address <<endl;
+    cout << "Input Address: " << hex << address <<endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
-    cout << "Input Tag: " << tag <<endl;
+    cout << "Input Tag: " << hex << tag <<endl;
 #endif
     unsigned int index = get_index(address);
 #ifdef DEBUG
-    cout << "Input Index: " << index <<endl;
+    cout << "Input Index: " << hex << index <<endl;
 #endif
      
     for(unsigned int i=0; i < assoc; i++)
@@ -118,12 +118,16 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
     misses++;
     allocate(address, tag, index, prog_counter);
 
-
+    if(below == NULL)//Nothing below which means last cache so now will get from memory
+    {
+        mem_ops++;
+        return;
+    }
+    this->below->read(address, prog_counter);
 }
 
 void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
-    cout << "Tag placed: " << tag << endl;
 
     for(unsigned int i=0; i < assoc; i++)
     {
@@ -137,12 +141,6 @@ void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index,
     }
 
     replace(tag, index, prog_counter);
-    if(below == NULL)//Nothing below which means last cache so now will get from memory
-    {
-        mem_ops++;
-        return;
-    }
-    this->below->read(address, prog_counter);
 }
 
 void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
@@ -152,10 +150,13 @@ void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_coun
     {
         case LRU:
             idx = lru(tag, index);
+            break;
         case PLRU:
             return;
+            break;
         case OPT:
             return;
+            break;
     }
 
     if(dirty[index][idx] == DIRTY)//Write-back policy
@@ -167,11 +168,15 @@ void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_coun
             below->write(address_to_replace, prog_counter);
     }
     tags[index][idx] = tag;
+    cout << "New tag:" << hex << tag << endl;
+    dirty[index][idx] = NOT_DIRTY;
+    if(replacement_policy == LRU)
+        sequence[index][idx] = prog_counter;
 }
 
 unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 {
-    int32_t idx = 0;
+    unsigned int idx = 0;
     unsigned int min = 0xffffffff;
     for(unsigned int i=0; i < assoc; i++)
     {
@@ -187,8 +192,17 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 
 void Cache::read(unsigned int address, unsigned int prog_counter)
 {
+#ifdef DEBUG
+    cout << "Read op Input Address: " << hex << address <<endl;
+#endif
     unsigned int tag = get_tag(address);
+#ifdef DEBUG
+    cout << "Input Tag: " << hex << tag <<endl;
+#endif
     unsigned int index = get_index(address);
+#ifdef DEBUG
+    cout << "Input Index: " << hex << index <<endl;
+#endif
     
     for(unsigned int i=0; i < assoc; i++)
     {
@@ -206,6 +220,13 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
     this->misses++;
     cout << "Missed" << endl;
     allocate(address, tag, index, prog_counter);
+    
+    if(below == NULL)//Nothing below which means last cache so now will get from memory
+    {
+        mem_ops++;
+        return;
+    }
+    this->below->read(address, prog_counter); 
 }
 
 void Cache::get_stats(unsigned int& hits, unsigned int& misses, unsigned int& mem_ops)

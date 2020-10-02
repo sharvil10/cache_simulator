@@ -5,6 +5,7 @@ using namespace std;
 int main()
 {
     string path = "../MachineProblem1_Fall2020/traces/perl_trace.txt";
+    //string path = "../MachineProblem1_Fall2020/traces/tmp.txt";
     unsigned int block_size = 16;
     unsigned int l1_size = 1024;
     unsigned int l1_assoc = 1;
