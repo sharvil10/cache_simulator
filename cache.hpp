@@ -48,8 +48,8 @@ class Cache
 
         char replacement_policy;
         char inclusion_policy;
-        Cache *below;
-        Cache *above;
+        Cache *below = NULL;
+        Cache *above = NULL;
 
         unsigned int allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter);
         unsigned int replace(unsigned int tag, unsigned int index, unsigned int prog_counter);
@@ -65,6 +65,7 @@ class Cache
         void add_below(Cache *below);
         void read(unsigned int address, unsigned int prog_counter);
         void write(unsigned int address, unsigned int prog_counter);
+        void evict(unsigned int address);
         void get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
                        unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops);
         void dump_cache();

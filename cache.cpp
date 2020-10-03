@@ -61,6 +61,7 @@ void Cache::add_above(Cache *above)
 void Cache::add_below(Cache *below)
 {
     this->below = below;
+    this->below->add_above(this);
 }
 
 unsigned int Cache::get_tag(unsigned int address)
@@ -167,10 +168,10 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
     cout << "Existing tag " << hex << tags[index][idx] << 
         " at " << idx << " will be replaced with " << hex << tag << endl;
 #endif
+    unsigned int address_to_replace = convert_to_address(tags[index][idx], index);
     if(dirty[index][idx] == DIRTY)//Write-back policy
     {
         write_backs++;
-        unsigned int address_to_replace = convert_to_address(tags[index][idx], index);
 #ifdef DEBUG
         cout << "Write-back for address " << address_to_replace << endl;
 #endif
@@ -188,6 +189,10 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
     dirty[index][idx] = NOT_DIRTY;
     if(replacement_policy == LRU)
         sequence[index][idx] = seq_counter - 1;
+
+    if((inclusion_policy == INCLUSIVE) & (this->above != NULL))
+        this->above->evict(address_to_replace);
+
     return idx;
 }
 
@@ -218,7 +223,6 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
 #ifdef DEBUG
     cout << "***** Reading Started *****" << endl;
     cout << "Input Address: " << hex << address <<endl;
-    cout << "Prog Counter: " << dec << prog_counter << endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
@@ -255,6 +259,39 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
     }
     below->read(address, prog_counter); 
 }
+
+void Cache::evict(unsigned int address)
+{
+#ifdef DEBUG
+    cout << "***** Eviction Started *****" << endl;
+    cout << "Input Address: " << hex << address <<endl;
+#endif
+    unsigned int tag = get_tag(address);
+#ifdef DEBUG
+    cout << "Input Tag: " << hex << tag <<endl;
+#endif
+    unsigned int index = get_index(address);
+#ifdef DEBUG
+    cout << "Input Index: " << hex << index <<endl;
+#endif
+
+    for(unsigned int i = 0; i < assoc; i++)
+    {
+        if(dirty[index][i] == FREE)
+            continue;
+        if(tags[index][i] == tag)
+        {
+#ifdef DEBUG
+            cout << "Found tag at: " << dec << i << endl;
+#endif
+            if(dirty[index][i] == DIRTY)
+                mem_ops++;
+            dirty[index][i] = FREE;
+        }
+    }
+}
+
+
 void Cache::get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
                       unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops)
 {
