@@ -60,23 +60,45 @@ void Simulator::get_stats()
     unsigned int read_misses;
     unsigned int write_misses;
     unsigned int write_backs;
-    unsigned int mem_ops;
+    unsigned int mem_ops1 = 0;
+    unsigned int mem_ops2 = 0;
+
     L1->get_stats(reads, writes, read_misses,
-                  write_misses, write_backs, mem_ops);
+                  write_misses, write_backs, mem_ops1);
+
+    cout << "===== L1 contents =====" << endl;
     L1->dump_cache();
-    L2->dump_cache();
-    cout << "L1 Reads: " << dec << reads << endl;
-    cout << "L1 Read misses: " << dec << read_misses << endl;
-    cout << "L1 Writes: " << dec << writes << endl;
-    cout << "L1 Write misses: " << dec << write_misses << endl;
-    cout << "L1 Write backs: " << dec << write_backs << endl;
-    cout << "L1 mem_ops: " << dec << mem_ops << endl;
-    L2->get_stats(reads, writes, read_misses,
-                  write_misses, write_backs, mem_ops);
-    cout << "L2 Reads: " << dec << reads << endl;
-    cout << "L2 Read misses: " << dec << read_misses << endl;
-    cout << "L2 Writes: " << dec << writes << endl;
-    cout << "L2 Write misses: " << dec << write_misses << endl;
-    cout << "L2 Write backs: " << dec << write_backs << endl;
-    cout << "L2 mem_ops: " << dec << mem_ops << endl;
+    if(L2 != NULL)
+    {
+        cout << "===== L2 contents =====" << endl;
+        L2->dump_cache();
+    }
+    cout << "===== Simulation results (raw) =====" << endl;
+    printf("a. %-26s %u\n", "number of L1 reads:", reads);
+    printf("b. %-26s %u\n", "number of L1 read misses:", read_misses);
+    printf("c. %-26s %u\n", "number of L1 writes:", writes);
+    printf("d. %-26s %u\n", "number of L1 write misses:", write_misses);
+    printf("e. %-26s %.6f\n", "L1 miss rate:", (float)(read_misses + write_misses)/(reads + writes));
+    printf("f. %-26s %u\n", "number of L1 writebacks:", write_backs);
+
+    reads = 0;
+    writes = 0;
+    read_misses = 0;
+    write_misses = 0;
+    write_backs = 0;
+    if(L2 != NULL)
+        L2->get_stats(reads, writes, read_misses,
+                      write_misses, write_backs, mem_ops2);
+
+    printf("g. %-26s %u\n", "number of L2 reads:", reads);
+    printf("h. %-26s %u\n", "number of L2 read misses:", read_misses);
+    printf("i. %-26s %u\n", "number of L2 writes:", writes);
+    printf("j. %-26s %u\n", "number of L2 write misses:", write_misses);
+    if(L2 != NULL)
+        printf("k. %-26s %.6f\n", "L2 miss rate:", (float)(read_misses)/(reads));
+    else
+        printf("k. %-26s %d\n", "L2 miss rate:", 0);
+
+    printf("l. %-26s %u\n", "number of L2 writebacks:", write_backs);
+    printf("m. %-26s %u\n", "total memory traffic:", mem_ops1 + mem_ops2);
 }

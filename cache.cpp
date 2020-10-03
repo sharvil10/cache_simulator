@@ -169,7 +169,7 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
 #endif
     if(dirty[index][idx] == DIRTY)//Write-back policy
     {
-
+        write_backs++;
         unsigned int address_to_replace = convert_to_address(tags[index][idx], index);
 #ifdef DEBUG
         cout << "Write-back for address " << address_to_replace << endl;
@@ -268,27 +268,25 @@ void Cache::get_stats(unsigned int& reads, unsigned int& writes, unsigned int& r
 
 void Cache::dump_cache()
 {
-    cout << "===== Cache Dump =====" << endl;
     for(unsigned int i = 0; i < sets; i++)
     {
-        printf("Set %5d: ", i);
+        printf("Set     %d:", i);
         for(unsigned int j = 0; j < assoc; j++)
         {
-            printf("\t%5x ", tags[i][j]);
+            printf("\t%-6x ", tags[i][j]);
             switch(dirty[i][j])
             {
                 case DIRTY:
                     printf("D");
                     break;
                 case NOT_DIRTY:
-                    printf("N");
+                    printf(" ");
                     break;
                 case FREE:
-                    printf("F");
+                    printf(" ");
                     break;
             }
         }
         printf("\n");
     }
-    cout << "===== Cache dump ended =====" << endl;
 }

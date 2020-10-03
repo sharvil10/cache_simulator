@@ -14,6 +14,9 @@
 #define PLRU 1
 #define OPT 2
 
+#define NON_INCLUSIVE 0
+#define INCLUSIVE 1
+
 using namespace std;
 
 class Cache

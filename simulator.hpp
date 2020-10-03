@@ -17,8 +17,8 @@ using namespace std;
 class Simulator
 {
     private:
-        Cache *L1;
-        Cache *L2;
+        Cache *L1 = NULL;
+        Cache *L2 = NULL;
         unsigned int prog_counter = 0;
         Trace *trace; 
     public:
