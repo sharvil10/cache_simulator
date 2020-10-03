@@ -55,19 +55,28 @@ void Simulator::execute_instruction(Instruction& i)
 
 void Simulator::get_stats()
 {
-    unsigned int hits;
-    unsigned int write_misses;
+    unsigned int reads;
+    unsigned int writes;
     unsigned int read_misses;
+    unsigned int write_misses;
+    unsigned int write_backs;
     unsigned int mem_ops;
-
-    L1->get_stats(hits, read_misses, write_misses, mem_ops);
-
-    cout << "Hits: " << dec << hits << endl;
-    cout << "Read misses: " << dec << read_misses << endl;
-    cout << "Write misses: " << dec << write_misses << endl;
-    cout << dec << mem_ops << endl;
-    //L2->get_stats(hits, misses, mem_ops);
-    //cout << dec << hits << endl;
-    //cout << dec << misses << endl;
-    //cout << dec << mem_ops << endl;     
+    L1->get_stats(reads, writes, read_misses,
+                  write_misses, write_backs, mem_ops);
+    L1->dump_cache();
+    L2->dump_cache();
+    cout << "L1 Reads: " << dec << reads << endl;
+    cout << "L1 Read misses: " << dec << read_misses << endl;
+    cout << "L1 Writes: " << dec << writes << endl;
+    cout << "L1 Write misses: " << dec << write_misses << endl;
+    cout << "L1 Write backs: " << dec << write_backs << endl;
+    cout << "L1 mem_ops: " << dec << mem_ops << endl;
+    L2->get_stats(reads, writes, read_misses,
+                  write_misses, write_backs, mem_ops);
+    cout << "L2 Reads: " << dec << reads << endl;
+    cout << "L2 Read misses: " << dec << read_misses << endl;
+    cout << "L2 Writes: " << dec << writes << endl;
+    cout << "L2 Write misses: " << dec << write_misses << endl;
+    cout << "L2 Write backs: " << dec << write_backs << endl;
+    cout << "L2 mem_ops: " << dec << mem_ops << endl;
 }

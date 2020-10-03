@@ -89,9 +89,12 @@ unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
 
 void Cache::write(unsigned int address, unsigned int prog_counter)
 {
+    writes++;
+    seq_counter++;
 #ifdef DEBUG
     cout << "***** Writing Started *****" << endl;
     cout << "Input Address: " << hex << address <<endl;
+    cout << "Prog Counter: " << dec << prog_counter << endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
@@ -110,7 +113,7 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
             //0x00000000 and not set
             hits++;
             dirty[index][i] = DIRTY;//Write-back Policy
-            sequence[index][i] = prog_counter;
+            sequence[index][i] = seq_counter - 1;
             return;
         }
     }
@@ -136,7 +139,7 @@ unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned in
         {
             dirty[index][i] = NOT_DIRTY;//Write-back Policy
             tags[index][i] = tag;
-            sequence[index][i] = prog_counter;
+            sequence[index][i] = seq_counter - 1;
             return i;
         }
     }
@@ -184,7 +187,7 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
     tags[index][idx] = tag;
     dirty[index][idx] = NOT_DIRTY;
     if(replacement_policy == LRU)
-        sequence[index][idx] = prog_counter;
+        sequence[index][idx] = seq_counter - 1;
     return idx;
 }
 
@@ -199,6 +202,10 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
             min = sequence[index][i];
             idx = i;
         }
+#ifdef DEBUG
+        if((sequence[index][i] == min) && (sequence[index][i] != 0))
+            cout << "WARNING: PC same " << sequence[index][i] << endl;
+#endif
     }
     return idx;//Assoc index of the victim block
 
@@ -206,9 +213,12 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 
 void Cache::read(unsigned int address, unsigned int prog_counter)
 {
+    reads++;
+    seq_counter++;
 #ifdef DEBUG
     cout << "***** Reading Started *****" << endl;
     cout << "Input Address: " << hex << address <<endl;
+    cout << "Prog Counter: " << dec << prog_counter << endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
@@ -226,7 +236,7 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
             //set_flags is used to distinguish between 
             //0x00000000 and not set
             hits++;
-            sequence[index][i] = prog_counter;
+            sequence[index][i] = seq_counter - 1;
             return;
         }
     }
@@ -245,12 +255,14 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
     }
     below->read(address, prog_counter); 
 }
-
-void Cache::get_stats(unsigned int& hits, unsigned int& read_misses, unsigned int& write_misses, unsigned int& mem_ops)
+void Cache::get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
+                      unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops)
 {
-    hits = this->hits;
+    reads = this->reads;
+    writes = this->writes;
     read_misses = this->read_misses;
     write_misses = this->write_misses;
+    write_backs = this->write_backs;
     mem_ops = this->mem_ops;
 }
 
@@ -262,7 +274,7 @@ void Cache::dump_cache()
         printf("Set %5d: ", i);
         for(unsigned int j = 0; j < assoc; j++)
         {
-            printf("\t%x ", tags[i][j]);
+            printf("\t%5x ", tags[i][j]);
             switch(dirty[i][j])
             {
                 case DIRTY:

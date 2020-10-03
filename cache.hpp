@@ -24,6 +24,8 @@ class Cache
         unsigned int block_size;
         unsigned int assoc;
         unsigned int sets;
+        unsigned int reads=0;
+        unsigned int writes=0;
         unsigned int read_misses=0;
         unsigned int write_misses=0;
         unsigned int write_backs=0;
@@ -31,6 +33,7 @@ class Cache
         unsigned int mem_ops=0;
         unsigned int **tags;
         unsigned int **sequence; //For LRU
+        unsigned int seq_counter=0;
         char **dirty; //Set if the specific tag is already used. 
                           //To differentiate between 0x00000000 and not available.
         unsigned int tag_mask;
@@ -59,7 +62,8 @@ class Cache
         void add_below(Cache *below);
         void read(unsigned int address, unsigned int prog_counter);
         void write(unsigned int address, unsigned int prog_counter);
-        void get_stats(unsigned int& hits, unsigned int& read_misses, unsigned int& write_misses, unsigned int& mem_ops);
+        void get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
+                       unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops);
         void dump_cache();
 };
 
