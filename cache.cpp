@@ -117,8 +117,8 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
 
     //Cache miss so allocate
     write_misses++;
-    allocate(address, tag, index, prog_counter);
-
+    unsigned int idx = allocate(address, tag, index, prog_counter);
+    dirty[index][idx] = DIRTY; //After reading block from next level we are also going to update it.
     if(below == NULL)//Nothing below which means last cache so now will get from memory
     {
         mem_ops++;
@@ -127,7 +127,7 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
     this->below->read(address, prog_counter);
 }
 
-void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
+unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
 
     for(unsigned int i=0; i < assoc; i++)
@@ -137,14 +137,14 @@ void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index,
             dirty[index][i] = NOT_DIRTY;//Write-back Policy
             tags[index][i] = tag;
             sequence[index][i] = prog_counter;
-            return;
+            return i;
         }
     }
 
-    replace(tag, index, prog_counter);
+    return replace(tag, index, prog_counter);
 }
 
-void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
+unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
 
     unsigned int idx;
@@ -154,10 +154,10 @@ void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_coun
             idx = lru(tag, index);
             break;
         case PLRU:
-            return;
+            return 0;
             break;
         case OPT:
-            return;
+            return 0;
             break;
     }
 #ifdef DEBUG
@@ -185,6 +185,7 @@ void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_coun
     dirty[index][idx] = NOT_DIRTY;
     if(replacement_policy == LRU)
         sequence[index][idx] = prog_counter;
+    return idx;
 }
 
 unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)

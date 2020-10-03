@@ -45,8 +45,8 @@ class Cache
         Cache *below;
         Cache *above;
 
-        void allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter);
-        void replace(unsigned int tag, unsigned int index, unsigned int prog_counter);
+        unsigned int allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter);
+        unsigned int replace(unsigned int tag, unsigned int index, unsigned int prog_counter);
         unsigned int lru(unsigned int tag_to_write, unsigned int index);
         unsigned int get_tag(unsigned int address);
         unsigned int get_index(unsigned int address);

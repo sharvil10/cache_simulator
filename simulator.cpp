@@ -37,11 +37,11 @@ void Simulator::execute_instruction(Instruction& i)
 {
     if(i.rw_flags == 'r')
     {
-        L1->read(i.address, prog_counter++);
+        L1->read(i.address, ++prog_counter);
     }
     else if(i.rw_flags == 'w') 
     {
-        L1->write(i.address, prog_counter++);
+        L1->write(i.address, ++prog_counter);
     }
     else
     {
