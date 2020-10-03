@@ -26,7 +26,7 @@ void Simulator::execute()
     for(unsigned int i = 0; i < N; i++)
     {
         #ifdef DEBUG
-            cout << "Executing instruction: " << i << endl;
+            cout << "===== Executing instruction =====" << i << endl;
         #endif
         execute_instruction(trace->trace[i]);
     }
@@ -48,20 +48,26 @@ void Simulator::execute_instruction(Instruction& i)
         cout << "The instruction's flag was:" << i.rw_flags << endl;
         exit(EXIT_FAILURE);
     }
+#ifdef DUMP
+    L1->dump_cache();
+#endif
 }
 
 void Simulator::get_stats()
 {
     unsigned int hits;
-    unsigned int misses;
+    unsigned int write_misses;
+    unsigned int read_misses;
     unsigned int mem_ops;
 
-    L1->get_stats(hits, misses, mem_ops);
-    cout << dec << hits << endl;
-    cout << dec << misses << endl;
+    L1->get_stats(hits, read_misses, write_misses, mem_ops);
+
+    cout << "Hits: " << dec << hits << endl;
+    cout << "Read misses: " << dec << read_misses << endl;
+    cout << "Write misses: " << dec << write_misses << endl;
     cout << dec << mem_ops << endl;
-    L2->get_stats(hits, misses, mem_ops);
-    cout << dec << hits << endl;
-    cout << dec << misses << endl;
-    cout << dec << mem_ops << endl;     
+    //L2->get_stats(hits, misses, mem_ops);
+    //cout << dec << hits << endl;
+    //cout << dec << misses << endl;
+    //cout << dec << mem_ops << endl;     
 }

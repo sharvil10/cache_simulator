@@ -24,7 +24,9 @@ class Cache
         unsigned int block_size;
         unsigned int assoc;
         unsigned int sets;
-        unsigned int misses=0;
+        unsigned int read_misses=0;
+        unsigned int write_misses=0;
+        unsigned int write_backs=0;
         unsigned int hits=0;
         unsigned int mem_ops=0;
         unsigned int **tags;
@@ -57,7 +59,8 @@ class Cache
         void add_below(Cache *below);
         void read(unsigned int address, unsigned int prog_counter);
         void write(unsigned int address, unsigned int prog_counter);
-        void get_stats(unsigned int& hits, unsigned int& misses, unsigned int& mem_ops);
+        void get_stats(unsigned int& hits, unsigned int& read_misses, unsigned int& write_misses, unsigned int& mem_ops);
+        void dump_cache();
 };
 
 #endif

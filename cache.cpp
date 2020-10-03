@@ -90,6 +90,7 @@ unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
 void Cache::write(unsigned int address, unsigned int prog_counter)
 {
 #ifdef DEBUG
+    cout << "***** Writing Started *****" << endl;
     cout << "Input Address: " << hex << address <<endl;
 #endif
     unsigned int tag = get_tag(address);
@@ -115,7 +116,7 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
     }
 
     //Cache miss so allocate
-    misses++;
+    write_misses++;
     allocate(address, tag, index, prog_counter);
 
     if(below == NULL)//Nothing below which means last cache so now will get from memory
@@ -145,6 +146,7 @@ void Cache::allocate(unsigned int address, unsigned int tag, unsigned int index,
 
 void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
 {
+
     unsigned int idx;
     switch(replacement_policy)
     {
@@ -158,17 +160,28 @@ void Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_coun
             return;
             break;
     }
-
+#ifdef DEBUG
+    cout << "Existing tag " << hex << tags[index][idx] << 
+        " at " << idx << " will be replaced with " << hex << tag << endl;
+#endif
     if(dirty[index][idx] == DIRTY)//Write-back policy
     {
+
         unsigned int address_to_replace = convert_to_address(tags[index][idx], index);
+#ifdef DEBUG
+        cout << "Write-back for address " << address_to_replace << endl;
+#endif
         if(below == NULL)
+        {
+#ifdef DEBUG
+            cout << "Memory below" << endl;
+#endif            
             mem_ops++;
+        }
         else
             below->write(address_to_replace, prog_counter);
     }
     tags[index][idx] = tag;
-    cout << "New tag:" << hex << tag << endl;
     dirty[index][idx] = NOT_DIRTY;
     if(replacement_policy == LRU)
         sequence[index][idx] = prog_counter;
@@ -193,7 +206,8 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 void Cache::read(unsigned int address, unsigned int prog_counter)
 {
 #ifdef DEBUG
-    cout << "Read op Input Address: " << hex << address <<endl;
+    cout << "***** Reading Started *****" << endl;
+    cout << "Input Address: " << hex << address <<endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
@@ -217,8 +231,10 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
     }
 
     //Cache miss so allocate
-    this->misses++;
+    read_misses++;
+#ifdef DEBUG
     cout << "Missed" << endl;
+#endif
     allocate(address, tag, index, prog_counter);
     
     if(below == NULL)//Nothing below which means last cache so now will get from memory
@@ -226,14 +242,40 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
         mem_ops++;
         return;
     }
-    this->below->read(address, prog_counter); 
+    below->read(address, prog_counter); 
 }
 
-void Cache::get_stats(unsigned int& hits, unsigned int& misses, unsigned int& mem_ops)
+void Cache::get_stats(unsigned int& hits, unsigned int& read_misses, unsigned int& write_misses, unsigned int& mem_ops)
 {
     hits = this->hits;
-    misses = this->misses;
+    read_misses = this->read_misses;
+    write_misses = this->write_misses;
     mem_ops = this->mem_ops;
 }
 
-
+void Cache::dump_cache()
+{
+    cout << "===== Cache Dump =====" << endl;
+    for(unsigned int i = 0; i < sets; i++)
+    {
+        printf("Set %5d: ", i);
+        for(unsigned int j = 0; j < assoc; j++)
+        {
+            printf("\t%x ", tags[i][j]);
+            switch(dirty[i][j])
+            {
+                case DIRTY:
+                    printf("D");
+                    break;
+                case NOT_DIRTY:
+                    printf("N");
+                    break;
+                case FREE:
+                    printf("F");
+                    break;
+            }
+        }
+        printf("\n");
+    }
+    cout << "===== Cache dump ended =====" << endl;
+}
