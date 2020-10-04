@@ -41,14 +41,26 @@ Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  ch
     #endif
     tags = (unsigned int **) calloc(sets, sizeof(unsigned int *));
     dirty = (char **) calloc(sets, sizeof(char *));
+    unsigned long int nodes; 
     if(replacement_policy == LRU)
         sequence = (unsigned int **) calloc(sets, sizeof(unsigned int *));
+    else if(replacement_policy == PLRU)
+    {
+        tree = (char **) calloc(sets, sizeof(char *));
+        levels = log2(assoc); 
+        nodes = (unsigned long int) pow(2, levels) - 1;
+#ifdef DEBUG
+        cout << "Number of nodes in the tree: " << nodes << endl;
+#endif
+    }
     for(unsigned int i = 0; i < sets; i++)
     {
         tags[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
         dirty[i] = (char *) calloc(assoc, sizeof(char));
         if(replacement_policy == LRU)
             sequence[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
+        else if(replacement_policy == PLRU)
+            tree[i] = (char *) calloc(nodes, sizeof(char));
     }
 
 }
@@ -88,6 +100,59 @@ unsigned int Cache::convert_to_address(unsigned int tag, unsigned int index)
     return address;
 }
 
+void Cache::access_plru(unsigned int index, unsigned int idx_way)
+{
+    unsigned long int curr_idx = idx_way;
+    curr_idx += (unsigned long int) pow(2, levels) - 1;
+    char tmp_flag = 0;
+    while(curr_idx != 0)
+    {
+        tmp_flag = 0;
+        if((curr_idx % 2) == 0)
+            tmp_flag = 1;
+        curr_idx = (curr_idx - 1) / 2;
+        tree[index][curr_idx] = tmp_flag;
+    }
+}
+
+unsigned int Cache::plru_get_replace_idx(unsigned int index)
+{
+    unsigned long int curr_idx = 0;
+    unsigned long int curr_lev = 0;
+    while(curr_lev < levels)
+    {
+        if(tree[index][curr_idx] == 0)
+        {
+            tree[index][curr_idx] = 1;
+            curr_idx = 2 * (curr_idx + 1); //Go right.
+        }
+        else
+        {
+            tree[index][curr_idx] = 0;
+            curr_idx = 2 * (curr_idx + 1) - 1;//Go left
+
+        }
+        curr_lev++;
+    }
+    curr_idx -= (unsigned long int) pow(2, levels) - 1;
+    return (unsigned int) curr_idx;
+}
+
+void Cache::set_access_ids(unsigned int index, unsigned int idx_way)
+{
+    switch(replacement_policy)
+    {
+        case LRU:
+            sequence[index][idx_way] = seq_counter - 1;
+            break;
+        case PLRU:
+            access_plru(index, idx_way);
+            break;
+        case OPT:
+            return;
+    }
+}
+
 void Cache::write(unsigned int address, unsigned int prog_counter)
 {
     writes++;
@@ -114,7 +179,7 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
             //0x00000000 and not set
             hits++;
             dirty[index][i] = DIRTY;//Write-back Policy
-            sequence[index][i] = seq_counter - 1;
+            set_access_ids(index, i);
             return;
         }
     }
@@ -140,7 +205,7 @@ unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned in
         {
             dirty[index][i] = NOT_DIRTY;//Write-back Policy
             tags[index][i] = tag;
-            sequence[index][i] = seq_counter - 1;
+            set_access_ids(index, i);
             return i;
         }
     }
@@ -158,7 +223,7 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
             idx = lru(tag, index);
             break;
         case PLRU:
-            return 0;
+            idx = plru_get_replace_idx(index);
             break;
         case OPT:
             return 0;
@@ -187,9 +252,7 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
     }
     tags[index][idx] = tag;
     dirty[index][idx] = NOT_DIRTY;
-    if(replacement_policy == LRU)
-        sequence[index][idx] = seq_counter - 1;
-
+    set_access_ids(index, idx);
     if((inclusion_policy == INCLUSIVE) & (this->above != NULL))
         this->above->evict(address_to_replace);
 
@@ -240,7 +303,7 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
             //set_flags is used to distinguish between 
             //0x00000000 and not set
             hits++;
-            sequence[index][i] = seq_counter - 1;
+            set_access_ids(index, i);
             return;
         }
     }

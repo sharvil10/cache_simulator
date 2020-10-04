@@ -36,6 +36,8 @@ class Cache
         unsigned int mem_ops=0;
         unsigned int **tags;
         unsigned int **sequence; //For LRU
+        char **tree; //For PLRU we just neeed bits.
+        unsigned int levels;
         unsigned int seq_counter=0;
         char **dirty; //Set if the specific tag is already used. 
                           //To differentiate between 0x00000000 and not available.
@@ -58,6 +60,10 @@ class Cache
         unsigned int get_index(unsigned int address);
         unsigned int get_block(unsigned int address);
         unsigned int convert_to_address(unsigned int tag, unsigned int index);
+        void access_plru(unsigned int index, unsigned int idx_way);
+        unsigned int plru_get_replace_idx(unsigned int index);
+        void set_access_ids(unsigned int index, unsigned int idx_way);
+
     public:
         //Cache();
         Cache(unsigned int size, unsigned int block_size, unsigned int assoc, char repl_pol, char incl_pol);

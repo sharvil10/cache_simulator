@@ -26,7 +26,7 @@ int main(int argc, char **argv)
             repl_string = "LRU";
             break;
         case PLRU:
-            repl_string = "PLRU";
+            repl_string = "Pseudo-LRU";
             break;
         case OPT:
             repl_string = "Optimal";
