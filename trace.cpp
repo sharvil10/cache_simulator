@@ -78,11 +78,11 @@ void Trace::get_hex(string& inst, unsigned int& address)
     #endif
 }
 
-unsigned int Trace::get_next_idx(unsigned int curr_idx)
+unsigned int Trace::get_next_idx(unsigned int curr_idx, Cache *cache)
 {
-    unsigned int query_address = trace[curr_idx].address;
+    unsigned int query_address = cache->get_address_wo_offset(trace[curr_idx].address);
     for(unsigned int i = curr_idx + 1; i < len; i++)
-        if(trace[i].address == query_address)
+        if(cache->get_address_wo_offset(trace[i].address) == query_address)
             return i;
     return len;
 }

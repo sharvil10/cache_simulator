@@ -13,9 +13,11 @@ Simulator::Simulator(unsigned int blocksize, unsigned int l1_size,
     trace = new Trace(trace_file);
 
     L1 = new Cache(l1_size, blocksize, l1_assoc, replacement_policy, inclusion_policy);
+    L1->set_trace(trace);
     if(l2_size > 0)
     {
         L2 = new Cache(l2_size, blocksize, l2_assoc, replacement_policy, inclusion_policy);
+        L2->set_trace(trace);
         L1->add_below(L2);
     }
 
@@ -36,18 +38,15 @@ void Simulator::execute()
 
 void Simulator::execute_instruction(Instruction& i)
 {
-    unsigned int next_idx = this->trace->get_next_idx(prog_counter);
-#ifdef DEBUG
-    cout << "Next index: " << dec << next_idx << endl;
-#endif
+    //unsigned int next_idx = this->trace->get_next_idx(prog_counter, L1);
     prog_counter++;
     if(i.rw_flags == 'r')
     {
-        L1->read(i.address, next_idx);
+        L1->read(i.address, prog_counter - 1);
     }
     else if(i.rw_flags == 'w') 
     {
-        L1->write(i.address, next_idx);
+        L1->write(i.address, prog_counter - 1);
     }
     else
     {

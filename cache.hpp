@@ -1,7 +1,7 @@
-#include "trace.hpp"
-
 #ifndef __CACHE_INLCUDED__
 #define __CACHE_INLCUDED__
+
+#include "trace.hpp"
 
 #define TRUE 0
 #define FALSE 1
@@ -16,6 +16,8 @@
 
 #define NON_INCLUSIVE 0
 #define INCLUSIVE 1
+
+class Trace;
 
 using namespace std;
 
@@ -75,6 +77,8 @@ class Cache
         void evict(unsigned int address);
         void get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
                        unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops);
+        void set_trace(Trace *trace);
+        unsigned int get_address_wo_offset(unsigned int address);
         void dump_cache();
 };
 
