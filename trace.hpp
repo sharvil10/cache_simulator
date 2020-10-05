@@ -4,6 +4,8 @@
 #ifndef __TRACE_INCLUDED__
 #define __TRACE_INCLUDED__
 
+#define NOT_USED_AGAIN 0xffffffff; 
+
 using namespace std;
 struct Instruction {
     char rw_flags;
@@ -20,6 +22,7 @@ class Trace
         Trace(string& trace_path);
         void clean();
         unsigned int get_length();
+        unsigned int get_next_idx(unsigned int curr_idx);
         Instruction *trace;
 
 };

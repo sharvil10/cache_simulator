@@ -3,10 +3,6 @@
 
 using namespace std;
 
-/*Cache::Cache()
-{
-    return;
-}*/
 
 Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  char replacement_policy, char inclusion_policy)
 {
@@ -42,7 +38,7 @@ Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  ch
     tags = (unsigned int **) calloc(sets, sizeof(unsigned int *));
     dirty = (char **) calloc(sets, sizeof(char *));
     unsigned long int nodes; 
-    if(replacement_policy == LRU)
+    if((replacement_policy == LRU) | (replacement_policy == OPT))
         sequence = (unsigned int **) calloc(sets, sizeof(unsigned int *));
     else if(replacement_policy == PLRU)
     {
@@ -57,7 +53,7 @@ Cache::Cache(unsigned int size, unsigned int block_size, unsigned int assoc,  ch
     {
         tags[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
         dirty[i] = (char *) calloc(assoc, sizeof(char));
-        if(replacement_policy == LRU)
+        if((replacement_policy == LRU) | (replacement_policy == OPT))
             sequence[i] = (unsigned int *) calloc(assoc, sizeof(unsigned int));
         else if(replacement_policy == PLRU)
             tree[i] = (char *) calloc(nodes, sizeof(char));
@@ -138,7 +134,7 @@ unsigned int Cache::plru_get_replace_idx(unsigned int index)
     return (unsigned int) curr_idx;
 }
 
-void Cache::set_access_ids(unsigned int index, unsigned int idx_way)
+void Cache::set_access_ids(unsigned int index, unsigned int idx_way, unsigned int next_idx)
 {
     switch(replacement_policy)
     {
@@ -149,18 +145,18 @@ void Cache::set_access_ids(unsigned int index, unsigned int idx_way)
             access_plru(index, idx_way);
             break;
         case OPT:
-            return;
+            sequence[index][idx_way] = next_idx;
+            break;
     }
 }
 
-void Cache::write(unsigned int address, unsigned int prog_counter)
+void Cache::write(unsigned int address, unsigned int next_idx)
 {
     writes++;
     seq_counter++;
 #ifdef DEBUG
     cout << "***** Writing Started *****" << endl;
     cout << "Input Address: " << hex << address <<endl;
-    cout << "Prog Counter: " << dec << prog_counter << endl;
 #endif
     unsigned int tag = get_tag(address);
 #ifdef DEBUG
@@ -179,24 +175,24 @@ void Cache::write(unsigned int address, unsigned int prog_counter)
             //0x00000000 and not set
             hits++;
             dirty[index][i] = DIRTY;//Write-back Policy
-            set_access_ids(index, i);
+            set_access_ids(index, i, next_idx);
             return;
         }
     }
 
     //Cache miss so allocate
     write_misses++;
-    unsigned int idx = allocate(address, tag, index, prog_counter);
+    unsigned int idx = allocate(address, tag, index, next_idx);
     dirty[index][idx] = DIRTY; //After reading block from next level we are also going to update it.
     if(below == NULL)//Nothing below which means last cache so now will get from memory
     {
         mem_ops++;
         return;
     }
-    this->below->read(address, prog_counter);
+    this->below->read(address, next_idx);
 }
 
-unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter)
+unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int next_idx)
 {
 
     for(unsigned int i=0; i < assoc; i++)
@@ -205,15 +201,15 @@ unsigned int Cache::allocate(unsigned int address, unsigned int tag, unsigned in
         {
             dirty[index][i] = NOT_DIRTY;//Write-back Policy
             tags[index][i] = tag;
-            set_access_ids(index, i);
+            set_access_ids(index, i, next_idx);
             return i;
         }
     }
 
-    return replace(tag, index, prog_counter);
+    return replace(tag, index, next_idx);
 }
 
-unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int prog_counter)
+unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int next_idx)
 {
 
     unsigned int idx;
@@ -226,7 +222,7 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
             idx = plru_get_replace_idx(index);
             break;
         case OPT:
-            return 0;
+            idx = opt(index);
             break;
     }
 #ifdef DEBUG
@@ -248,11 +244,11 @@ unsigned int Cache::replace(unsigned int tag, unsigned int index, unsigned int p
             mem_ops++;
         }
         else
-            below->write(address_to_replace, prog_counter);
+            below->write(address_to_replace, next_idx);
     }
     tags[index][idx] = tag;
     dirty[index][idx] = NOT_DIRTY;
-    set_access_ids(index, idx);
+    set_access_ids(index, idx, next_idx);
     if((inclusion_policy == INCLUSIVE) & (this->above != NULL))
         this->above->evict(address_to_replace);
 
@@ -271,7 +267,7 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
             idx = i;
         }
 #ifdef DEBUG
-        if((sequence[index][i] == min) && (sequence[index][i] != 0))
+        if((sequence[index][i] == min) & (sequence[index][i] != 0))
             cout << "WARNING: PC same " << sequence[index][i] << endl;
 #endif
     }
@@ -279,7 +275,28 @@ unsigned int Cache::lru(unsigned int tag_to_write, unsigned int index)
 
 }
 
-void Cache::read(unsigned int address, unsigned int prog_counter)
+unsigned int Cache::opt(unsigned int index)
+{
+    unsigned int idx = 0;
+    unsigned int max = 0;
+    for(unsigned int i=0; i < assoc; i++)
+    {
+#ifdef DEBUG
+        if((sequence[index][i] == max) & (sequence[index][i] != 0xffffffff))
+            cout << "WARNING: OPT PC same " << sequence[index][i] << endl;
+#endif
+        if(sequence[index][i] > max)
+        {
+            max = sequence[index][i];
+            idx = i;
+        }
+
+    }
+    return idx;//Assoc index of the victim block
+
+}
+
+void Cache::read(unsigned int address, unsigned int next_idx)
 {
     reads++;
     seq_counter++;
@@ -303,7 +320,7 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
             //set_flags is used to distinguish between 
             //0x00000000 and not set
             hits++;
-            set_access_ids(index, i);
+            set_access_ids(index, i, next_idx);
             return;
         }
     }
@@ -313,14 +330,14 @@ void Cache::read(unsigned int address, unsigned int prog_counter)
 #ifdef DEBUG
     cout << "Missed" << endl;
 #endif
-    allocate(address, tag, index, prog_counter);
+    allocate(address, tag, index, next_idx);
     
     if(below == NULL)//Nothing below which means last cache so now will get from memory
     {
         mem_ops++;
         return;
     }
-    below->read(address, prog_counter); 
+    below->read(address, next_idx); 
 }
 
 void Cache::evict(unsigned int address)

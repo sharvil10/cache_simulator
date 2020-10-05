@@ -52,25 +52,26 @@ class Cache
         char inclusion_policy;
         Cache *below = NULL;
         Cache *above = NULL;
+        Trace *trace;
 
-        unsigned int allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int prog_counter);
-        unsigned int replace(unsigned int tag, unsigned int index, unsigned int prog_counter);
+        unsigned int allocate(unsigned int address, unsigned int tag, unsigned int index, unsigned int new_idx);
+        unsigned int replace(unsigned int tag, unsigned int index, unsigned int next_idx);
         unsigned int lru(unsigned int tag_to_write, unsigned int index);
+        unsigned int opt(unsigned int index);
         unsigned int get_tag(unsigned int address);
         unsigned int get_index(unsigned int address);
         unsigned int get_block(unsigned int address);
         unsigned int convert_to_address(unsigned int tag, unsigned int index);
         void access_plru(unsigned int index, unsigned int idx_way);
         unsigned int plru_get_replace_idx(unsigned int index);
-        void set_access_ids(unsigned int index, unsigned int idx_way);
+        void set_access_ids(unsigned int index, unsigned int idx_way, unsigned int next_idx);
 
     public:
-        //Cache();
         Cache(unsigned int size, unsigned int block_size, unsigned int assoc, char repl_pol, char incl_pol);
         void add_above(Cache *above);
         void add_below(Cache *below);
-        void read(unsigned int address, unsigned int prog_counter);
-        void write(unsigned int address, unsigned int prog_counter);
+        void read(unsigned int address, unsigned int next_idx);
+        void write(unsigned int address, unsigned int next_idx);
         void evict(unsigned int address);
         void get_stats(unsigned int& reads, unsigned int& writes, unsigned int& read_misses,
                        unsigned int& write_misses, unsigned int& write_backs, unsigned int& mem_ops);

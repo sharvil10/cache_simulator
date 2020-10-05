@@ -10,6 +10,8 @@ Simulator::Simulator(unsigned int blocksize, unsigned int l1_size,
                     char inclusion_policy, std::string& trace_file)
 {
     /*Create caches*/
+    trace = new Trace(trace_file);
+
     L1 = new Cache(l1_size, blocksize, l1_assoc, replacement_policy, inclusion_policy);
     if(l2_size > 0)
     {
@@ -17,7 +19,6 @@ Simulator::Simulator(unsigned int blocksize, unsigned int l1_size,
         L1->add_below(L2);
     }
 
-    trace = new Trace(trace_file);
 }
 
 void Simulator::execute()
@@ -26,7 +27,7 @@ void Simulator::execute()
     for(unsigned int i = 0; i < N; i++)
     {
         #ifdef DEBUG
-            cout << "===== Executing instruction =====" << i << endl;
+            cout << "===== Executing instruction =====" << dec << i << endl;
         #endif
         execute_instruction(trace->trace[i]);
     }
@@ -35,13 +36,18 @@ void Simulator::execute()
 
 void Simulator::execute_instruction(Instruction& i)
 {
+    unsigned int next_idx = this->trace->get_next_idx(prog_counter);
+#ifdef DEBUG
+    cout << "Next index: " << dec << next_idx << endl;
+#endif
+    prog_counter++;
     if(i.rw_flags == 'r')
     {
-        L1->read(i.address, ++prog_counter);
+        L1->read(i.address, next_idx);
     }
     else if(i.rw_flags == 'w') 
     {
-        L1->write(i.address, ++prog_counter);
+        L1->write(i.address, next_idx);
     }
     else
     {
